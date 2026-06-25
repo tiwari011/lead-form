@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import type { LeadDocument } from "./schemas/Lead";
 
 const DEFAULT_REDIRECT_URL = "https://admexo.com";
@@ -7,18 +7,20 @@ function getAppUrl() {
   return (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
 }
 
-function getTransporter() {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-    throw new Error("Email credentials are missing. Set EMAIL_USER and EMAIL_PASSWORD.");
+function getResendClient() {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error("RESEND_API_KEY is missing.");
   }
 
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    }
-  });
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
+function getEmailFrom() {
+  return process.env.EMAIL_FROM || "Lead Team <onboarding@resend.dev>";
+}
+
+function getReplyTo() {
+  return process.env.EMAIL_REPLY_TO || undefined;
 }
 
 export async function sendLeadEmail(lead: LeadDocument) {
@@ -29,11 +31,12 @@ export async function sendLeadEmail(lead: LeadDocument) {
   )}`;
   const openPixelUrl = `${appUrl}/api/track/${leadId}/open`;
 
-  const transporter = getTransporter();
+  const resend = getResendClient();
 
-  await transporter.sendMail({
-    from: `"Lead Team" <${process.env.EMAIL_USER}>`,
+  const { error } = await resend.emails.send({
+    from: getEmailFrom(),
     to: lead.email,
+    replyTo: getReplyTo(),
     subject: "Thanks for reaching out",
     html: `
       <div style="margin:0;padding:32px;background:#f8fafc;font-family:Arial,sans-serif;color:#0f172a;">
@@ -59,6 +62,35 @@ export async function sendLeadEmail(lead: LeadDocument) {
       </div>
     `
   });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
+
+export async function sendTestEmail(to: string) {
+  const resend = getResendClient();
+  const appUrl = getAppUrl();
+
+  const { data, error } = await resend.emails.send({
+    from: getEmailFrom(),
+    to,
+    replyTo: getReplyTo(),
+    subject: "Lead Tracking System email test",
+    html: `
+      <div style="font-family:Arial,sans-serif;line-height:1.6;color:#0f172a;">
+        <h1 style="font-size:22px;margin:0 0 12px;">Email test successful</h1>
+        <p style="margin:0 0 12px;">Your Lead Tracking System can send email through Resend.</p>
+        <p style="margin:0;">App URL: ${escapeHtml(appUrl)}</p>
+      </div>
+    `
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
 }
 
 function escapeHtml(value: string) {
