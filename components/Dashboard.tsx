@@ -107,7 +107,7 @@ export default function Dashboard() {
       {
         title: "Emails Sent",
         value: stats.emailsSent,
-        helper: "Successfully handed to SMTP",
+        helper: "Accepted by the email provider",
         icon: Mail,
         tone: "blue" as const
       },

@@ -53,13 +53,13 @@ export async function POST(request: Request) {
       requirement: payload.requirement?.trim()
     });
 
-    sendLeadEmail(lead)
-      .then(async () => {
-        await Lead.findByIdAndUpdate(lead._id, { emailSent: true });
-      })
-      .catch((error) => {
-        console.error(`Failed to send lead email for ${lead._id.toString()}`, error);
-      });
+    try {
+      await sendLeadEmail(lead);
+      lead.emailSent = true;
+      await lead.save();
+    } catch (emailError) {
+      console.error(`Failed to send lead email for ${lead._id.toString()}`, emailError);
+    }
 
     return NextResponse.json(
       {

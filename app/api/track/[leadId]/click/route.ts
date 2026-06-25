@@ -18,9 +18,12 @@ export async function GET(request: NextRequest, { params }: Params) {
   try {
     if (isDatabaseConfigured()) {
       await connectToDatabase();
+      const now = new Date();
       await Lead.findByIdAndUpdate(leadId, {
+        emailOpened: true,
+        emailOpenedAt: now,
         linkClicked: true,
-        linkClickedAt: new Date()
+        linkClickedAt: now
       });
     }
   } catch (error) {
