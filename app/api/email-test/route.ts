@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { sendTestEmail } from "@/lib/email";
 
-export async function GET() {
+export async function GET(request: Request) {
   if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Email test route is disabled in production." }, { status: 404 });
+    const url = new URL(request.url);
+    const secret = url.searchParams.get("secret");
+
+    if (!process.env.EMAIL_TEST_SECRET || secret !== process.env.EMAIL_TEST_SECRET) {
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    }
   }
 
   try {
